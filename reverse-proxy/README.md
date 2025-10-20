@@ -1,4 +1,4 @@
-# ACME-SSL Reverse-Proxy  
+# ACME-SSL Reverse-Proxy fo ZeroSSL provider
 Docker Compose stack → automatic SSL (ZeroSSL) + nginx HTTPS reverse-proxy
 
 ## 1. What it is
