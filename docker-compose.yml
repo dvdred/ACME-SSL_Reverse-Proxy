@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Container che gestisce certificati E serve challenge HTTP
+  acme-server:
+    build: 
+      context: ./acme-server
+    container_name: acme-server
+    restart: unless-stopped
+    ports:
+      - "80:80"  # Porta 80 per challenge HTTP
+    environment:
+      - PUBLIC_IP=${PUBLIC_IP}
+      - ZEROSSL_API_KEY=${ZEROSSL_API_KEY}
+      - AUTO_CLEANUP_CERTS=${AUTO_CLEANUP_CERTS:-false}
+      - TZ=Europe/Rome
+    volumes:
+      - certs:/certs
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - proxy-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Container nginx - solo reverse proxy HTTPS
+  reverse-proxy:
+    build: 
+      context: ./reverse-proxy
+    container_name: reverse-proxy
+    restart: unless-stopped
+    ports:
+      - "443:443"  # Solo HTTPS
+    environment:
+      - PUBLIC_IP=${PUBLIC_IP}
+      - BACKEND1_HOST=${BACKEND1_HOST:-backend1.lan}
+      - BACKEND1_PORT=${BACKEND1_PORT:-8580}
+    volumes:
+      - certs:/etc/nginx/certs:ro
+      - nginx-logs:/var/log/nginx
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - proxy-net
+      - backend-net
+    depends_on:
+      acme-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 443 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  certs:
+  nginx-logs:
+
+networks:
+  proxy-net:
+  backend-net:

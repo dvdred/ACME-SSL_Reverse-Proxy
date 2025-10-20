@@ -1,0 +1,14 @@
+# IP pubblico del server
+PUBLIC_IP=12.13.14.15
+
+# ZeroSSL API Key (ottieni da https://app.zerossl.com/developer)
+ZEROSSL_API_KEY=your_api_key_here
+# 1. Vai su https://app.zerossl.com/developer
+# 2. Crea un account o fai login
+# 3. Nella sezione "Developer" trovi la tua API Key
+# 4. Copia la chiave nel file .env
+
+# Configurazione backend
+BACKEND1_HOST=backend1.lan
+BACKEND1_PORT=8580
+AUTO_CLEANUP_CERTS=true

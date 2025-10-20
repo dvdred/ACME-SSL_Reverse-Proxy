@@ -1,0 +1,58 @@
+# HTTPS Server - Reverse Proxy
+server {
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
+    server_name ${PUBLIC_IP} _;
+
+    # Certificati SSL
+    ssl_certificate /etc/nginx/certs/${PUBLIC_IP}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/${PUBLIC_IP}/privkey.pem;
+
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Logs
+    access_log /var/log/nginx/https-access.log main;
+    error_log /var/log/nginx/https-error.log warn;
+
+    # Backend 1 con path rewriting
+    location /backend1/ {
+        rewrite ^/backend1/(.*) /$1 break;
+        
+        proxy_pass http://${BACKEND1_HOST}:${BACKEND1_PORT};
+        
+        # Headers per IP reale del client
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # Health check
+    location /health {
+        access_log off;
+        return 200 "Reverse Proxy OK\n";
+        add_header Content-Type text/plain;
+    }
+
+    # Default
+    location / {
+        return 404 "Not Found\n";
+        add_header Content-Type text/plain;
+    }
+}
